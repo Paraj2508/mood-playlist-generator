@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% if result %}{{ result.mood_label }} · {% endif %}Mood Playlist Generator</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body data-mood="{{ result.mood_key if result else 'default' }}">
+    <main class="page">
+        <header class="intro">
+            <h1>How are you feeling?</h1>
+            <p>Write a line or two. We’ll find a Spotify playlist that fits.</p>
+        </header>
+
+        <form method="POST" action="{{ url_for('generate') }}" class="mood-form" id="mood-form">
+            <label class="sr-only" for="mood_text">Your mood</label>
+            <textarea
+                id="mood_text"
+                name="mood_text"
+                maxlength="{{ max_chars }}"
+                placeholder="Had a super productive day, or: feeling a bit low tonight…"
+                required>{{ user_input }}</textarea>
+
+            <div class="form-row">
+                <span class="counter" id="counter" aria-live="polite">0 / {{ max_chars }}</span>
+                <button type="submit" id="submit-btn">Find my playlist</button>
+            </div>
+        </form>
+
+        {% if error %}
+            <p class="error" role="alert">{{ error }}</p>
+        {% endif %}
+
+        {% if result %}
+            <section class="result" aria-labelledby="result-title">
+                <p class="result-reason">{{ result.reason }}</p>
+                <h2 id="result-title">{{ result.mood_label }}</h2>
+
+                <div class="embed-wrapper">
+                    <iframe
+                        title="Spotify playlist for your mood"
+                        src="https://open.spotify.com/embed/playlist/{{ result.playlist_id }}?utm_source=generator&amp;theme=0"
+                        width="100%"
+                        height="380"
+                        frameborder="0"
+                        allowfullscreen
+                        allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                        loading="lazy"></iframe>
+                </div>
+
+                <div class="result-actions">
+                    <form method="POST" action="{{ url_for('generate') }}">
+                        <input type="hidden" name="mood_text" value="{{ user_input }}">
+                        <button type="submit" class="secondary">Try another playlist</button>
+                    </form>
+                    <a class="link" href="https://open.spotify.com/playlist/{{ result.playlist_id }}" target="_blank" rel="noopener noreferrer">Open in Spotify</a>
+                    <form method="POST" action="{{ url_for('reset') }}">
+                        <button type="submit" class="link-button">Start over</button>
+                    </form>
+                </div>
+            </section>
+        {% endif %}
+    </main>
+
+    <script>
+        (function () {
+            var textarea = document.getElementById("mood_text");
+            var counter = document.getElementById("counter");
+            var form = document.getElementById("mood-form");
+            var button = document.getElementById("submit-btn");
+            var max = {{ max_chars }};
+
+            function updateCount() {
+                counter.textContent = textarea.value.length + " / " + max;
+            }
+            textarea.addEventListener("input", updateCount);
+            updateCount();
+
+            form.addEventListener("submit", function () {
+                button.disabled = true;
+                button.textContent = "Finding a playlist…";
+            });
+
+            // Ctrl/Cmd + Enter submits
+            textarea.addEventListener("keydown", function (e) {
+                if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+                    form.requestSubmit();
+                }
+            });
+        })();
+    </script>
+</body>
+</html>
